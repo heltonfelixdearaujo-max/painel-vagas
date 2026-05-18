@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route } from 'react-router-dom';
 import './index.css';
 import { initialJobs } from './data/mockData';
@@ -15,6 +15,7 @@ import PublicApplication from './pages/PublicApplication';
 import SharedReport from './pages/SharedReport';
 import TalentPool from './pages/TalentPool';
 import SettingsPage from './pages/SettingsPage';
+import { getGhToken, setGhToken, syncAllJobs } from './utils/jobStorage';
 
 window.React = React;
 
@@ -27,10 +28,50 @@ const viewMeta = {
 };
 
 // ─── Recruiter Dashboard ───────────────────────────────────────────────────────
+function TokenBanner({ jobs }) {
+  const [token, setToken] = useState(getGhToken);
+  const [input, setInput] = useState('');
+  const [syncing, setSyncing] = useState(false);
+  const [done, setDone] = useState(false);
+
+  if (token) return null;
+
+  const save = async () => {
+    if (!input.trim()) return;
+    setGhToken(input);
+    setToken(input);
+    setSyncing(true);
+    await syncAllJobs(jobs);
+    setSyncing(false);
+    setDone(true);
+  };
+
+  return (
+    <div style={{ background:'#FFF7ED', border:'1px solid #FED7AA', borderRadius:10, padding:'12px 18px', marginBottom:16, display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
+      <span style={{ fontSize:13, color:'#92400E', fontWeight:600, flex:'0 0 auto' }}>⚡ Para links curtos no WhatsApp:</span>
+      <input
+        value={input} onChange={e => setInput(e.target.value)}
+        placeholder="Cole aqui o token do GitHub (ghp_…)"
+        style={{ flex:1, minWidth:220, padding:'7px 10px', border:'1.5px solid #FED7AA', borderRadius:7, fontSize:12, fontFamily:'monospace', outline:'none' }}
+      />
+      <button onClick={save} disabled={syncing}
+        style={{ padding:'7px 16px', background:'#EA580C', color:'white', border:'none', borderRadius:7, cursor:'pointer', fontWeight:700, fontSize:13, flexShrink:0 }}>
+        {syncing ? 'Sincronizando…' : done ? '✓ Pronto!' : 'Ativar'}
+      </button>
+    </div>
+  );
+}
+
 function RecruiterDashboard({ jobs, setJobs, pool, setPool, trash, setTrash, session, onLogout }) {
   const [view, setView] = useState('dashboard');
   const [jobModal, setJobModal] = useState(null);
   const [candidatesModal, setCandidatesModal] = useState(null);
+
+  // Auto-sync jobs when token is already set
+  useEffect(() => {
+    const token = getGhToken();
+    if (token && jobs?.length) syncAllJobs(jobs);
+  }, []);
 
   const openJobs = jobs.filter(j => j.status === 'Aberta').length;
   const meta = viewMeta[view] || viewMeta.dashboard;
@@ -120,6 +161,8 @@ function RecruiterDashboard({ jobs, setJobs, pool, setPool, trash, setTrash, ses
         </div>
 
         <div className="content">
+          <TokenBanner jobs={jobs} />
+
           {view === 'dashboard' && <Dashboard jobs={jobs} onViewChange={setView} />}
 
           {view === 'vagas' && (

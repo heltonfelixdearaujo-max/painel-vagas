@@ -3,13 +3,19 @@ const REPO = 'painel-vagas';
 const BRANCH = 'gh-pages';
 const PAGES_BASE = 'https://heltonfelixdearaujo-max.github.io/painel-vagas';
 
-const BUILTIN_TOKEN = import.meta.env.VITE_GH_TOKEN || '';
-
 export function getGhToken() {
-  return localStorage.getItem('wayzim-gh-token') || BUILTIN_TOKEN;
+  return localStorage.getItem('wayzim-gh-token') || '';
 }
 export function setGhToken(t) {
   localStorage.setItem('wayzim-gh-token', t.trim());
+}
+
+export async function syncAllJobs(jobs) {
+  const token = getGhToken();
+  if (!token || !jobs?.length) return;
+  for (const job of jobs) {
+    await storeJobAndGetLink(job).catch(() => {});
+  }
 }
 
 export async function storeJobAndGetLink(job) {
