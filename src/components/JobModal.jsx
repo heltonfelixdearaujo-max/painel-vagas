@@ -1,13 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { X, Plus, Trash2, Copy, ExternalLink } from 'lucide-react';
 import { departments, jobTypes, modalities, jobStatuses, salaryRangesBRL, salaryRangesUSD, locationOptions } from '../data/mockData';
-import { shortenUrl } from '../utils/shortenUrl';
+import { compressToEncodedURIComponent } from 'lz-string';
 
 const empty = { title: '', department: '', location: '', type: 'CLT', salary: '', modality: 'Remoto', status: 'Aberta', description: '', openDate: '' };
 
 function buildApplyLink(job) {
   const { candidates, ...jobData } = job;
-  const encoded = encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(jobData)))));
+  const encoded = compressToEncodedURIComponent(JSON.stringify(jobData));
   return `${window.location.origin}${window.location.pathname}#/candidatar/${job.id}?j=${encoded}`;
 }
 
@@ -18,13 +18,7 @@ export default function JobModal({ job, onClose, onSave }) {
   const [newQ, setNewQ] = useState({ text: '', required: true, type: 'text' });
   const [addingQ, setAddingQ] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [shortLink, setShortLink] = useState('');
-
-  useEffect(() => {
-    if (!job?.id) return;
-    setShortLink('Gerando link…');
-    shortenUrl(buildApplyLink(job)).then(s => setShortLink(s));
-  }, [job?.id]);
+  const shortLink = job?.id ? buildApplyLink(job) : '';
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -44,7 +38,7 @@ export default function JobModal({ job, onClose, onSave }) {
   };
 
   const copyLink = () => {
-    if (!shortLink || shortLink === 'Gerando link…') return;
+    if (!shortLink) return;
     if (navigator.clipboard && window.isSecureContext) {
       navigator.clipboard.writeText(shortLink).catch(() => {});
     }

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { decompressFromEncodedURIComponent } from 'lz-string';
 import { MapPin, Briefcase, DollarSign, CheckCircle, Upload, X, ChevronRight, ChevronLeft, ChevronDown } from 'lucide-react';
 import { formatWhatsApp, isValidWhatsApp } from '../utils/whatsapp';
 import { discQuestions } from '../data/discQuestions';
@@ -142,7 +143,12 @@ export default function PublicApplication({ jobs, onApply }) {
     try {
       const params = new URLSearchParams(location.search);
       const enc = params.get('j');
-      if (enc) return JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(enc)))));
+      if (enc) {
+        // Try lz-string first, fallback to old btoa encoding
+        const lz = decompressFromEncodedURIComponent(enc);
+        if (lz) return JSON.parse(lz);
+        return JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(enc)))));
+      }
     } catch {}
     return null;
   }, [jobs, jobId, location.search]);
