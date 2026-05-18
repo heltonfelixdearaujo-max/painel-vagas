@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { discProfiles } from '../data/discQuestions';
+import { shortenUrl } from '../utils/shortenUrl';
 
 // ── i18n labels ───────────────────────────────────────────────────────────────
 const T = {
@@ -299,8 +300,9 @@ export default function SharedReport() {
     }
     const all = getFeedbacks(shareId);
     setLocalFeedbacks(all);
-    setUpdatedUrl(buildUpdatedUrl(all));
+    setUpdatedUrl('encurtando…');
     setUrlCopied(false);
+    shortenUrl(buildUpdatedUrl(all)).then(short => setUpdatedUrl(short));
     setFbForm({ name:'', rating:0, text:'' });
     setSuccessMsg(t.submittedTitle);
     setTimeout(() => setSuccessMsg(''), 3000);

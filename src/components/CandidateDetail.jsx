@@ -5,6 +5,7 @@ import { generatePDF } from '../utils/pdfExport';
 import { discProfiles } from '../data/discQuestions';
 import { languages, languageLevels, processStages, candidateStatuses } from '../data/mockData';
 import DiscChart from './DiscChart';
+import { shortenUrl } from '../utils/shortenUrl';
 
 const recStyle = {
   recommended: { bg: '#DCFCE7', color: '#16A34A', label: 'Recomendado ✓' },
@@ -66,18 +67,22 @@ export default function CandidateDetail({ candidate, job, onClose, onUpdate }) {
     } catch {}
 
     setShowShareMenu(false);
+    setShareToast('Encurtando link…');
 
-    // Try clipboard — always show modal as fallback
-    if (navigator.clipboard && window.isSecureContext) {
-      navigator.clipboard.writeText(url).then(() => {
-        setShareToast('Link copiado! ✓');
-        setTimeout(() => setShareToast(''), 3500);
-      }).catch(() => {
-        setShareLinkModal(url);
-      });
-    } else {
-      setShareLinkModal(url);
-    }
+    shortenUrl(url).then(shortUrl => {
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(shortUrl).then(() => {
+          setShareToast('Link copiado! ✓');
+          setTimeout(() => setShareToast(''), 3500);
+        }).catch(() => {
+          setShareLinkModal(shortUrl);
+          setShareToast('');
+        });
+      } else {
+        setShareLinkModal(shortUrl);
+        setShareToast('');
+      }
+    });
   };
 
   // ── Get unread feedbacks for this candidate ──
