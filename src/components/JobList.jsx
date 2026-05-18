@@ -1,24 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Search, MapPin, Pencil, Trash2, Users, Plus, Eye, Copy, ExternalLink, Check } from 'lucide-react';
 import { jobStatuses } from '../data/mockData';
-import { compressToEncodedURIComponent } from 'lz-string';
+import { storeJobAndGetLink } from '../utils/jobStorage';
 
 const statusBadge = (s) => {
   const map = { 'Aberta': 'badge-Aberta', 'Em Seleção': 'badge-Em Seleção', 'Encerrada': 'badge-Encerrada' };
   return 'badge ' + (map[s] || '');
 };
 
-function buildApplyLink(job) {
-  const { candidates, ...jobData } = job;
-  const encoded = compressToEncodedURIComponent(JSON.stringify(jobData));
-  return `${window.location.origin}${window.location.pathname}#/candidatar/${job.id}?j=${encoded}`;
-}
-
 export default function JobList({ jobs, onNew, onEdit, onDelete, onCandidates }) {
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [filterDept, setFilterDept] = useState('');
   const [copied, setCopied] = useState(null);
+  const [linkModal, setLinkModal] = useState(null);
 
   const depts = [...new Set(jobs.map(j => j.department))].sort();
 
@@ -30,17 +25,19 @@ export default function JobList({ jobs, onNew, onEdit, onDelete, onCandidates })
     return matchSearch && matchStatus && matchDept;
   });
 
-  const copyLink = (job) => {
-    const link = buildApplyLink(job);
-    if (navigator.clipboard && window.isSecureContext) {
-      navigator.clipboard.writeText(link).catch(() => {});
-    }
+  const copyLink = async (job) => {
     setCopied(job.id);
+    const link = await storeJobAndGetLink(job);
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(link).catch(() => setLinkModal(link));
+    } else {
+      setLinkModal(link);
+    }
     setTimeout(() => setCopied(null), 2500);
   };
 
   return (
-    <div className="card">
+    <><div className="card">
       <div className="card-header">
         <div className="card-title">Vagas Cadastradas</div>
         <button className="btn btn-primary" onClick={onNew}><Plus size={14} /> Nova Vaga</button>
@@ -104,9 +101,9 @@ export default function JobList({ jobs, onNew, onEdit, onDelete, onCandidates })
                       <button className="btn-icon" title={copied === job.id ? 'Copiado!' : 'Copiar link'} onClick={() => copyLink(job)} style={{ color: copied === job.id ? '#16A34A' : undefined }}>
                         {copied === job.id ? <Check size={13} /> : <Copy size={13} />}
                       </button>
-                      <a href={buildApplyLink(job)} target="_blank" rel="noreferrer" className="btn-icon" title="Abrir página pública" style={{ display: 'inline-flex', alignItems: 'center' }}>
+                      <button className="btn-icon" title="Abrir página pública" style={{ display: 'inline-flex', alignItems: 'center' }} onClick={async () => { const l = await storeJobAndGetLink(job); window.open(l, '_blank'); }}>
                         <ExternalLink size={13} />
-                      </a>
+                      </button>
                     </div>
                   </td>
                   <td>
@@ -123,5 +120,19 @@ export default function JobList({ jobs, onNew, onEdit, onDelete, onCandidates })
         )}
       </div>
     </div>
-  );
+
+    {/* Link modal fallback */}
+    {linkModal && (
+      <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.5)', zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center' }} onClick={() => setLinkModal(null)}>
+        <div style={{ background:'white', borderRadius:12, padding:24, width:440, maxWidth:'90vw' }} onClick={e => e.stopPropagation()}>
+          <div style={{ fontWeight:700, marginBottom:12 }}>Link da vaga</div>
+          <input readOnly value={linkModal} onFocus={e => e.target.select()} style={{ width:'100%', padding:'8px 10px', border:'1px solid #E5E7EB', borderRadius:7, fontSize:12, fontFamily:'monospace', boxSizing:'border-box' }} />
+          <div style={{ display:'flex', gap:8, marginTop:12, justifyContent:'flex-end' }}>
+            <button onClick={() => { navigator.clipboard?.writeText(linkModal); setLinkModal(null); }} style={{ padding:'8px 16px', background:'#1B5299', color:'white', border:'none', borderRadius:7, cursor:'pointer', fontWeight:600 }}>Copiar e fechar</button>
+            <button onClick={() => setLinkModal(null)} style={{ padding:'8px 16px', background:'#F3F4F6', border:'none', borderRadius:7, cursor:'pointer' }}>Fechar</button>
+          </div>
+        </div>
+      </div>
+    )}
+  </>);
 }

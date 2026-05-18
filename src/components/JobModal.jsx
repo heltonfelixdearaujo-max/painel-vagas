@@ -1,15 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Plus, Trash2, Copy, ExternalLink } from 'lucide-react';
 import { departments, jobTypes, modalities, jobStatuses, salaryRangesBRL, salaryRangesUSD, locationOptions } from '../data/mockData';
-import { compressToEncodedURIComponent } from 'lz-string';
+import { storeJobAndGetLink } from '../utils/jobStorage';
 
 const empty = { title: '', department: '', location: '', type: 'CLT', salary: '', modality: 'Remoto', status: 'Aberta', description: '', openDate: '' };
-
-function buildApplyLink(job) {
-  const { candidates, ...jobData } = job;
-  const encoded = compressToEncodedURIComponent(JSON.stringify(jobData));
-  return `${window.location.origin}${window.location.pathname}#/candidatar/${job.id}?j=${encoded}`;
-}
 
 export default function JobModal({ job, onClose, onSave }) {
   const isEdit = Boolean(job?.id);
@@ -18,7 +12,7 @@ export default function JobModal({ job, onClose, onSave }) {
   const [newQ, setNewQ] = useState({ text: '', required: true, type: 'text' });
   const [addingQ, setAddingQ] = useState(false);
   const [copied, setCopied] = useState(false);
-  const shortLink = job?.id ? buildApplyLink(job) : '';
+  const [shortLink, setShortLink] = useState('Gerando link…');
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -37,8 +31,13 @@ export default function JobModal({ job, onClose, onSave }) {
     onSave({ ...form, screeningQuestions: questions });
   };
 
+  useEffect(() => {
+    if (!job?.id) return;
+    storeJobAndGetLink(job).then(l => setShortLink(l));
+  }, [job?.id]);
+
   const copyLink = () => {
-    if (!shortLink) return;
+    if (!shortLink || shortLink === 'Gerando link…') return;
     if (navigator.clipboard && window.isSecureContext) {
       navigator.clipboard.writeText(shortLink).catch(() => {});
     }
@@ -60,7 +59,7 @@ export default function JobModal({ job, onClose, onSave }) {
                 <button className="btn-icon" style={{ padding: 4 }} onClick={copyLink} title={copied ? 'Copiado!' : 'Copiar link'}>
                   <Copy size={13} color={copied ? '#16A34A' : undefined} />
                 </button>
-                <a href={shortLink || buildApplyLink(job)} target="_blank" rel="noreferrer" className="btn-icon" style={{ padding: 4 }} title="Abrir página pública">
+                <a href={shortLink && shortLink !== 'Gerando link…' ? shortLink : '#'} target="_blank" rel="noreferrer" className="btn-icon" style={{ padding: 4 }} title="Abrir página pública">
                   <ExternalLink size={13} />
                 </a>
               </div>

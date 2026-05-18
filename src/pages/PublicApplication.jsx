@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { decompressFromEncodedURIComponent } from 'lz-string';
+import { fetchJobFromServer } from '../utils/jobStorage';
 import { MapPin, Briefcase, DollarSign, CheckCircle, Upload, X, ChevronRight, ChevronLeft, ChevronDown } from 'lucide-react';
 import { formatWhatsApp, isValidWhatsApp } from '../utils/whatsapp';
 import { discQuestions } from '../data/discQuestions';
@@ -136,22 +137,26 @@ export default function PublicApplication({ jobs, onApply }) {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const job = useMemo(() => {
+  const [job, setJob] = useState(() => {
     const fromStore = jobs.find(j => String(j.id) === String(jobId));
     if (fromStore) return fromStore;
-    // Decode job data embedded in URL param ?j=...
     try {
       const params = new URLSearchParams(location.search);
       const enc = params.get('j');
       if (enc) {
-        // Try lz-string first, fallback to old btoa encoding
         const lz = decompressFromEncodedURIComponent(enc);
         if (lz) return JSON.parse(lz);
         return JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(enc)))));
       }
     } catch {}
     return null;
-  }, [jobs, jobId, location.search]);
+  });
+
+  // If not found locally or in URL, fetch from GitHub Pages hosted file
+  useEffect(() => {
+    if (job) return;
+    fetchJobFromServer(jobId).then(data => { if (data) setJob(data); });
+  }, [jobId]);
 
   const [step, setStep] = useState(STEP_LGPD);
   const [lgpdChecked, setLgpdChecked] = useState(false);

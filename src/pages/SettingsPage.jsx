@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Trash2, RotateCcw, Briefcase, Users, AlertTriangle, Shield, Bot, Eye, EyeOff, Check } from 'lucide-react';
+import { Trash2, RotateCcw, Briefcase, Users, AlertTriangle, Shield, Bot, Eye, EyeOff, Check, Link } from 'lucide-react';
 import WayzimLogo from '../components/WayzimLogo';
 import { getAnthropicKey, saveAnthropicKey } from '../utils/aiAnalysis';
+import { getGhToken, setGhToken } from '../utils/jobStorage';
 
 export default function SettingsPage({ trash, onRestore, onPermanentDelete, onClearTrash, session }) {
   const [tab, setTab] = useState('jobs');
@@ -9,6 +10,9 @@ export default function SettingsPage({ trash, onRestore, onPermanentDelete, onCl
   const [apiKey, setApiKey] = useState(getAnthropicKey);
   const [showKey, setShowKey] = useState(false);
   const [keySaved, setKeySaved] = useState(false);
+  const [ghToken, setGhTokenState] = useState(getGhToken);
+  const [ghSaved, setGhSaved] = useState(false);
+  const [showGhToken, setShowGhToken] = useState(false);
 
   const deletedJobs = (trash?.jobs || []);
   const deletedCandidates = (trash?.candidates || []);
@@ -16,9 +20,16 @@ export default function SettingsPage({ trash, onRestore, onPermanentDelete, onCl
   const tabs = [
     { id: 'jobs',       label: `Vagas Excluídas (${deletedJobs.length})`,       icon: Briefcase },
     { id: 'candidates', label: `Candidatos Excluídos (${deletedCandidates.length})`, icon: Users },
+    { id: 'links',      label: 'Links Curtos',                                   icon: Link },
     { id: 'ia',         label: 'IA — Análise Real',                              icon: Bot },
     { id: 'account',    label: 'Conta Admin',                                    icon: Shield },
   ];
+
+  const handleSaveGhToken = () => {
+    setGhToken(ghToken);
+    setGhSaved(true);
+    setTimeout(() => setGhSaved(false), 2500);
+  };
 
   const handleSaveKey = () => {
     saveAnthropicKey(apiKey);
@@ -48,6 +59,45 @@ export default function SettingsPage({ trash, onRestore, onPermanentDelete, onCl
           </button>
         ))}
       </div>
+
+      {/* Short Links Config */}
+      {tab === 'links' && (
+        <div style={{ background:'white', borderRadius:10, padding:24, boxShadow:'0 1px 3px rgba(0,0,0,.06)', maxWidth:560 }}>
+          <div style={{ fontWeight:700, fontSize:15, marginBottom:6 }}>Token do GitHub para Links Curtos</div>
+          <p style={{ fontSize:13, color:'#6B7280', marginBottom:16, lineHeight:1.5 }}>
+            Configure um token do GitHub para que os links das vagas fiquem curtos (ex: <code style={{ background:'#F3F4F6', padding:'1px 5px', borderRadius:4 }}>heltonfelixdearaujo-max.github.io/…/#/candidatar/123</code>) e funcionem direto no WhatsApp sem quebrar.
+          </p>
+          <div style={{ marginBottom:6, fontSize:12, fontWeight:600, color:'#374151' }}>GitHub Token (ghp_…)</div>
+          <div style={{ display:'flex', gap:8 }}>
+            <input
+              type={showGhToken ? 'text' : 'password'}
+              value={ghToken}
+              onChange={e => setGhTokenState(e.target.value)}
+              placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+              style={{ flex:1, padding:'9px 12px', border:'1.5px solid #E5E7EB', borderRadius:8, fontSize:13, fontFamily:'monospace', outline:'none' }}
+            />
+            <button onClick={() => setShowGhToken(v => !v)} className="btn-icon" style={{ padding:'0 10px' }}>
+              {showGhToken ? <EyeOff size={15}/> : <Eye size={15}/>}
+            </button>
+          </div>
+          <button
+            onClick={handleSaveGhToken}
+            style={{ marginTop:12, padding:'9px 20px', background: ghSaved ? '#16A34A' : '#1B5299', color:'white', border:'none', borderRadius:8, cursor:'pointer', fontWeight:700, fontSize:13, display:'flex', alignItems:'center', gap:6 }}
+          >
+            {ghSaved ? <><Check size={14}/> Salvo!</> : 'Salvar Token'}
+          </button>
+          {ghToken && (
+            <div style={{ marginTop:16, padding:'10px 14px', background:'#F0FDF4', borderRadius:8, border:'1px solid #BBF7D0', fontSize:12, color:'#15803D' }}>
+              ✓ Token configurado — links curtos ativados.
+            </div>
+          )}
+          {!ghToken && (
+            <div style={{ marginTop:16, padding:'10px 14px', background:'#FFFBEB', borderRadius:8, border:'1px solid #FDE68A', fontSize:12, color:'#92400E' }}>
+              ⚠ Sem token, os links gerados usarão o formato comprimido (mais longo).
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Deleted Jobs */}
       {tab === 'jobs' && (
