@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, MapPin, Pencil, Trash2, Users, Plus, Eye, Copy, ExternalLink, Check } from 'lucide-react';
 import { jobStatuses } from '../data/mockData';
 import { shortenUrl } from '../utils/shortenUrl';
@@ -19,6 +19,16 @@ export default function JobList({ jobs, onNew, onEdit, onDelete, onCandidates })
   const [filterStatus, setFilterStatus] = useState('');
   const [filterDept, setFilterDept] = useState('');
   const [copied, setCopied] = useState(null);
+  const [shortLinks, setShortLinks] = useState({});
+
+  useEffect(() => {
+    jobs.forEach(job => {
+      if (shortLinks[job.id]) return;
+      shortenUrl(buildApplyLink(job)).then(s =>
+        setShortLinks(prev => ({ ...prev, [job.id]: s }))
+      );
+    });
+  }, [jobs]);
 
   const depts = [...new Set(jobs.map(j => j.department))].sort();
 
@@ -31,14 +41,12 @@ export default function JobList({ jobs, onNew, onEdit, onDelete, onCandidates })
   });
 
   const copyLink = (job) => {
-    const long = buildApplyLink(job);
+    const link = shortLinks[job.id] || buildApplyLink(job);
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(link).catch(() => {});
+    }
     setCopied(job.id);
-    shortenUrl(long).then(short => {
-      if (navigator.clipboard && window.isSecureContext) {
-        navigator.clipboard.writeText(short).catch(() => {});
-      }
-      setTimeout(() => setCopied(null), 2500);
-    });
+    setTimeout(() => setCopied(null), 2500);
   };
 
   return (
@@ -106,7 +114,7 @@ export default function JobList({ jobs, onNew, onEdit, onDelete, onCandidates })
                       <button className="btn-icon" title={copied === job.id ? 'Copiado!' : 'Copiar link'} onClick={() => copyLink(job)} style={{ color: copied === job.id ? '#16A34A' : undefined }}>
                         {copied === job.id ? <Check size={13} /> : <Copy size={13} />}
                       </button>
-                      <a href={buildApplyLink(job)} target="_blank" rel="noreferrer" className="btn-icon" title="Abrir página pública" style={{ display: 'inline-flex', alignItems: 'center' }}>
+                      <a href={shortLinks[job.id] || buildApplyLink(job)} target="_blank" rel="noreferrer" className="btn-icon" title="Abrir página pública" style={{ display: 'inline-flex', alignItems: 'center' }}>
                         <ExternalLink size={13} />
                       </a>
                     </div>
