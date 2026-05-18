@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { X, Plus, Trash2, Copy, ExternalLink } from 'lucide-react';
 import { departments, jobTypes, modalities, jobStatuses, salaryRangesBRL, salaryRangesUSD, locationOptions } from '../data/mockData';
+import { shortenUrl } from '../utils/shortenUrl';
 
 const empty = { title: '', department: '', location: '', type: 'CLT', salary: '', modality: 'Remoto', status: 'Aberta', description: '', openDate: '' };
 
-function getPublicLink(jobId) {
-  return `${window.location.origin}${window.location.pathname}#/candidatar/${jobId}`;
+function buildApplyLink(job) {
+  const { candidates, ...jobData } = job;
+  const encoded = encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(jobData)))));
+  return `${window.location.origin}${window.location.pathname}#/candidatar/${job.id}?j=${encoded}`;
 }
 
 export default function JobModal({ job, onClose, onSave }) {
@@ -35,9 +38,13 @@ export default function JobModal({ job, onClose, onSave }) {
 
   const copyLink = () => {
     if (!job?.id) return;
-    navigator.clipboard.writeText(getPublicLink(job.id));
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    shortenUrl(buildApplyLink(job)).then(short => {
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(short).catch(() => {});
+      }
+      setTimeout(() => setCopied(false), 2500);
+    });
   };
 
   return (
@@ -49,12 +56,12 @@ export default function JobModal({ job, onClose, onSave }) {
             {isEdit && (
               <div style={{ display: 'flex', gap: 8, marginTop: 6, alignItems: 'center' }}>
                 <span style={{ fontSize: 11, color: '#9CA3AF', fontFamily: 'monospace', background: '#F3F4F6', padding: '2px 8px', borderRadius: 6, maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {getPublicLink(job.id)}
+                  {buildApplyLink(job).slice(0, 60)}…
                 </span>
                 <button className="btn-icon" style={{ padding: 4 }} onClick={copyLink} title={copied ? 'Copiado!' : 'Copiar link'}>
                   <Copy size={13} color={copied ? '#16A34A' : undefined} />
                 </button>
-                <a href={`#/candidatar/${job.id}`} target="_blank" rel="noreferrer" className="btn-icon" style={{ padding: 4 }} title="Abrir página pública">
+                <a href={buildApplyLink(job)} target="_blank" rel="noreferrer" className="btn-icon" style={{ padding: 4 }} title="Abrir página pública">
                   <ExternalLink size={13} />
                 </a>
               </div>
