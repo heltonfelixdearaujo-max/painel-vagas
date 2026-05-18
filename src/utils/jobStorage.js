@@ -54,10 +54,10 @@ export async function storeJobAndGetLink(job) {
     } catch {}
   }
 
-  // Fallback: compressed URL
+  // Fallback: compressed URL (encodeURIComponent avoids + decoded as space)
   const { compressToEncodedURIComponent } = await import('lz-string');
   const { candidates: _c, ...jobData2 } = job;
-  const encoded = compressToEncodedURIComponent(JSON.stringify(jobData2));
+  const encoded = encodeURIComponent(compressToEncodedURIComponent(JSON.stringify(jobData2)));
   return `${window.location.origin}${window.location.pathname}#/candidatar/${job.id}?j=${encoded}`;
 }
 

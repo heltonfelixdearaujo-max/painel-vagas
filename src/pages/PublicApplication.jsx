@@ -141,12 +141,14 @@ export default function PublicApplication({ jobs, onApply }) {
     const fromStore = jobs.find(j => String(j.id) === String(jobId));
     if (fromStore) return fromStore;
     try {
-      const params = new URLSearchParams(location.search);
-      const enc = params.get('j');
+      // Read raw from hash to avoid URLSearchParams decoding + as space
+      const rawSearch = window.location.hash.split('?')[1] || '';
+      const match = rawSearch.match(/(?:^|&)j=([^&]*)/);
+      const enc = match ? decodeURIComponent(match[1]) : null;
       if (enc) {
         const lz = decompressFromEncodedURIComponent(enc);
         if (lz) return JSON.parse(lz);
-        return JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(enc)))));
+        return JSON.parse(decodeURIComponent(escape(atob(enc))));
       }
     } catch {}
     return null;
