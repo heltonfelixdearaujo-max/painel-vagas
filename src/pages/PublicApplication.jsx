@@ -154,10 +154,15 @@ export default function PublicApplication({ jobs, onApply }) {
     return null;
   });
 
+  const [loadingJob, setLoadingJob] = useState(!job);
+
   // If not found locally or in URL, fetch from GitHub Pages hosted file
   useEffect(() => {
-    if (job) return;
-    fetchJobFromServer(jobId).then(data => { if (data) setJob(data); });
+    if (job) { setLoadingJob(false); return; }
+    fetchJobFromServer(jobId).then(data => {
+      if (data) setJob(data);
+      setLoadingJob(false);
+    });
   }, [jobId]);
 
   const [step, setStep] = useState(STEP_LGPD);
@@ -188,6 +193,16 @@ export default function PublicApplication({ jobs, onApply }) {
     }, 1000);
     return () => clearInterval(interval);
   }, [step]);
+
+  if (loadingJob) return (
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F9FAFB' }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ width: 40, height: 40, border: '4px solid #E5E7EB', borderTop: '4px solid #1B5299', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 16px' }} />
+        <p style={{ color: '#6B7280', fontSize: 14 }}>Carregando vaga...</p>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    </div>
+  );
 
   if (!job) return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F9FAFB' }}>
